@@ -3,9 +3,9 @@ appname := yuquesync
 
 sources := $(wildcard *.go)
 
-build = GOOS=$(1) GOARCH=$(2) go build -o ${build_dir}/$(appname)-$(1)-$(2)$(3)
-
-tar =  tar -cvzf ${build_dir}/$(appname)-$(1)-$(2).tar.gz  -C ${build_dir}  $(appname)-$(1)-$(2)$(3)  && rm -rf  ${build_dir}/$(appname)-$(1)-$(2)$(3)
+build = GOOS=$(1) GOARCH=$(2) go build -o ${build_dir}/$(appname)-$(1)-$(2)
+md5geb = md5 ${build_dir}/$(appname)-$(1)-$(2) > ${build_dir}/$(appname)-$(1)-$(2)_checksum.txt
+tar =  tar -cvzf ${build_dir}/$(appname)-$(1)-$(2).tar.gz  -C ${build_dir}  $(appname)-$(1)-$(2) $(appname)-$(1)-$(2)_checksum.txt
 
 ALL_LINUX = linux-amd64 \
 	linux-386 \
