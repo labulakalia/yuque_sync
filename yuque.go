@@ -296,6 +296,7 @@ func main() {
 		}
 
 	}
+
 	runhugocmd()
 	httpwebhook()
 }
