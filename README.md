@@ -17,6 +17,8 @@ api = "https://www.yuque.com/api/v2"
 port = 8081
 # sync after command
 aftercmd = ""
+# markdown文件目录文件路径为content/${article}
+article = "post"
 ```
 请在`hugo博客主目录`运行,同步后的文章会存储在`content/post`,如果你在文章中使用了语雀来插入图片，那么图片会被下载到本地的`content/images/`目录下,并且同步的文档里的图片链接会被替换为`/image/imagepath.png`,请将`hugo`命令加入环境变量中
 web

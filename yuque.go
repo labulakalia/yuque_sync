@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 var (
@@ -25,27 +26,29 @@ const (
 	hugocfg   = "config.toml"
 	mainpath  = "content"
 	imagepath = "images"
-	article   = "post"
 	hugocmd   = "hugo"
 )
 
+// Docs docs
 type Docs struct {
 	Data []data `json:"data"`
 }
 
 type data struct {
-	Id          int    `json:"id"`
+	ID          int    `json:"id"`
 	Body        string `json:"body,omitempty"`
 	PublishedAt string `json:"published_at"`
 	Title       string `json:"title"`
 }
 
+// DocsContent docs content
 type DocsContent struct {
 	Data data `json:"data"`
 }
 
+// ReqGet request
 func ReqGet(uri string) ([]byte, error) {
-	url := yq.YuQue.Api + uri
+	url := yq.YuQue.API + uri
 	log.Println("Start Req Url: ", url)
 	r, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -64,7 +67,7 @@ func ReqGet(uri string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("Err Status Code: %d", resp.StatusCode))
+		return nil, fmt.Errorf("Err Status Code: %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -115,14 +118,15 @@ func downloadDocs(storepath string, docs *DocsContent) error {
 		return err
 	}
 	var buf bytes.Buffer
-
-	buf.WriteString("---\n")
-	buf.WriteString(fmt.Sprintf("title: \"%s\"\n", docs.Data.Title))
-	buf.WriteString(fmt.Sprintf("date: %s\n", docs.Data.PublishedAt))
-	buf.WriteString("draft: false\n")
-	buf.WriteString("---\n")
-	buf.WriteString("\n")
-	buf.WriteString("\n")
+	if !strings.HasPrefix(docs.Data.Body, "---") {
+		buf.WriteString("---\n")
+		buf.WriteString(fmt.Sprintf("title: \"%s\"\n", docs.Data.Title))
+		buf.WriteString(fmt.Sprintf("date: %s\n", docs.Data.PublishedAt))
+		buf.WriteString("draft: false\n")
+		buf.WriteString("---\n")
+		buf.WriteString("\n")
+		buf.WriteString("\n")
+	}
 
 	buf.WriteString(docs.Data.Body)
 
@@ -151,14 +155,14 @@ func replaceimageurl(docs *DocsContent) error {
 			break
 		}
 
-		imageallpath := fmt.Sprintf("%s/%s/%d_%d.png", mainpath, imagepath, docs.Data.Id, imagenumber)
+		imageallpath := fmt.Sprintf("%s/%s/%d_%d.png", mainpath, imagepath, docs.Data.ID, imagenumber)
 		log.Printf("Start Replace %s image\n", imageallpath)
 		err := downimage(imageallpath, url[0])
 		if err != nil {
 			log.Printf("downimage failed url: %s err: %+v\n", url[0], err)
 			continue
 		}
-		docs.Data.Body = strings.Replace(docs.Data.Body, url[0], fmt.Sprintf("(/%s/%d_%d.png)", imagepath, docs.Data.Id, imagenumber), 1)
+		docs.Data.Body = strings.Replace(docs.Data.Body, url[0], fmt.Sprintf("(/%s/%d_%d.png)", imagepath, docs.Data.ID, imagenumber), 1)
 		imagenumber++
 	}
 	log.Println("Replace All Image success")
@@ -213,7 +217,7 @@ func httpwebhook() {
 			w.WriteHeader(500)
 			return
 		}
-		downfilepath := fmt.Sprintf("%s/%s/%d.md", mainpath, article, docscontent.Data.Id)
+		downfilepath := fmt.Sprintf("%s/%s/%d.md", mainpath, yq.YuQue.Article, docscontent.Data.ID)
 		err = downloadDocs(downfilepath, &docscontent)
 		if err != nil {
 			log.Printf("Download Title %s Err: %v", docscontent.Data.Title, err)
@@ -249,8 +253,9 @@ type yuque struct {
 	User     string `toml:"user"`
 	Kb       string `toml:"kb"`
 	Token    string `toml:"token"`
-	Api      string `toml:"api"`
+	API      string `toml:"api"`
 	Port     int    `toml:"port"`
+	Article  string `toml:"article"`
 	AfterCmd string `toml:"aftercmd"`
 }
 
@@ -271,7 +276,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	err = mkdirpath(fmt.Sprintf("%s/%s", mainpath, article))
+	err = mkdirpath(fmt.Sprintf("%s/%s", mainpath, yq.YuQue.Article))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -284,12 +289,12 @@ func main() {
 
 	for _, docs := range docs.Data {
 		time.Sleep(time.Millisecond * 300)
-		res, err := getDocsDetail(yq.YuQue.User, yq.YuQue.Kb, docs.Id)
+		res, err := getDocsDetail(yq.YuQue.User, yq.YuQue.Kb, docs.ID)
 		if err != nil {
 			log.Println("Get Docs content Err", err.Error())
 			continue
 		}
-		downfilepath := fmt.Sprintf("%s/%s/%d.md", mainpath, article, docs.Id)
+		downfilepath := fmt.Sprintf("%s/%s/%d.md", mainpath, yq.YuQue.Article, docs.ID)
 		err = downloadDocs(downfilepath, res)
 		if err != nil {
 			log.Printf("Download Title %s Err: %v", res.Data.Title, err)
